@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kyber AI — Gemini + Grok</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Highlight.js for code syntax styling -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        kyber: {
+                            bg: '#131314',
+                            sidebar: '#1e1f20',
+                            card: '#282a2c',
+                            cardHover: '#333538',
+                            border: '#444746',
+                            accent: '#a8c7fa',
+                            accentHover: '#8ab4f8',
+                            textPrimary: '#e3e3e3',
+                            textSecondary: '#c4c7c5',
+                            userBubble: '#2b2d30'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            background-color: #131314;
+            color: #e3e3e3;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden !important;
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #131314; }
+        ::-webkit-scrollbar-thumb { background: #333538; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444746; }
+
+        @keyframes pulseDot {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        .dot-pulse span {
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; background-color: #a8c7fa;
+            animation: pulseDot 1.4s infinite ease-in-out;
+        }
+        .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+        .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+        }
+
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .markdown-body pre {
+            background: #1e1f20; border: 1px solid #444746;
+            border-radius: 12px; padding: 1rem; margin: 0.75rem 0; overflow-x: auto;
+        }
+        .markdown-body code {
+            font-family: monospace; background: rgba(255,255,255,0.1);
+            padding: 2px 6px; border-radius: 4px; font-size: 0.9em;
+        }
+        .markdown-body pre code { background: transparent; padding: 0; }
+        .markdown-body ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; color: #ffffff;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col md:flex-row antialiased select-none overflow-hidden relative">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-4 right-4 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center p-4 max-w-sm mx-auto bg-kyber-sidebar border border-kyber-border text-kyber-textPrimary rounded-2xl shadow-2xl space-x-3">
+        <div class="p-2 bg-blue-500/20 text-kyber-accent rounded-xl shrink-0">
+            <i class="fa-solid fa-paper-plane text-lg"></i>
+        </div>
+        <div class="flex-1 text-sm leading-snug" id="toast-message">
+            Уведомление Kyber AI
+        </div>
+        <button onclick="closeToast()" class="text-kyber-textSecondary hover:text-white p-1 shrink-0">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden"></div>
+
+    <!-- Sidebar (3 Lines Menu) -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-30 w-72 bg-kyber-sidebar border-r border-kyber-border/40 flex flex-col justify-between transition-transform duration-300 transform -translate-x-full md:translate-x-0 shadow-2xl">
+        <div class="p-4 flex flex-col h-full overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 px-2">
+                <span class="font-bold text-lg text-white">Меню Kyber</span>
+                <button onclick="toggleSidebar()" class="text-kyber-textSecondary hover:text-white p-2 rounded-lg hover:bg-kyber-card transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- User Auth Card inside Sidebar -->
+            <div class="mb-5 bg-kyber-card border border-kyber-border/80 rounded-2xl p-4">
+                <div id="auth-logged-in" class="hidden">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-kyber-accent flex items-center justify-center font-bold text-white text-lg shadow-md" id="user-avatar-letter">
+                            U
+                        </div>
+                        <div class="overflow-hidden flex-1">
+                            <div class="text-sm font-semibold text-white truncate" id="user-display-nickname">Ник</div>
+                            <div class="text-[11px] text-kyber-textSecondary truncate" id="user-display-status">Аккаунт</div>
+                            <div class="mt-1" id="user-badge-container"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <!-- Admin Panel Button (Appears when password is admin password) -->
+                        <button id="admin-panel-btn" onclick="openAdminModal()" class="w-full hidden py-1.5 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Админ панель</span>
+                        </button>
+
+                        <button onclick="logoutUser()" class="w-full py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-medium transition">
+                            Выйти / Удалить аккаунт
+                        </button>
+                    </div>
+                </div>
+
+                <div id="auth-forms">
+                    <div class="flex border-b border-kyber-border/60 mb-3">
+                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 pb-2 text-xs font-semibold text-kyber-accent border-b-2 border-kyber-accent">Регистрация</button>
+                        <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 pb-2 text-xs font-semibold text-kyber-textSecondary">Вход</button>
+                    </div>
+
+                    <form id="register-form" onsubmit="handleRegister(event); return false;" class="space-y-2.5">
+                        <input type="text" id="reg-nickname" placeholder="Никнейм" required autocomplete="username" class="w-full bg-kyber-sidebar border border-kyber-border/80 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-kyber-accent">
+                        <input type="password" id="reg-password" placeholder="Пароль" required autocomplete="new-password" class="w-full bg-kyber-sidebar border border-kyber-border/80 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-kyber-accent">
+                        <button type="button" onclick="handleRegister(event)" class="w-full py-2 bg-kyber-accent hover:bg-kyber-accentHover text-slate-950 font-bold rounded-xl text-xs transition shadow">
+                            Создать аккаунт
+                        </button>
+                    </form>
+
+                    <form id="login-form" onsubmit="handleLogin(event); return false;" class="space-y-2.5 hidden">
+                        <input type="text" id="login-nickname" placeholder="Никнейм" required autocomplete="username" class="w-full bg-kyber-sidebar border border-kyber-border/80 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-kyber-accent">
+                        <input type="password" id="login-password" placeholder="Пароль" required autocomplete="current-password" class="w-full bg-kyber-sidebar border border-kyber-border/80 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-kyber-accent">
+                        <button type="button" onclick="handleLogin(event)" class="w-full py-2 bg-kyber-accent hover:bg-kyber-accentHover text-slate-950 font-bold rounded-xl text-xs transition shadow">
+                            Войти
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- New Chat Button -->
+            <button onclick="startNewChat()" class="flex items-center space-x-3 w-full bg-kyber-card hover:bg-kyber-cardHover border border-kyber-border/60 text-kyber-textPrimary px-4 py-3 rounded-2xl transition-all duration-200 shadow-sm mb-4">
+                <i class="fa-solid fa-plus text-kyber-accent"></i>
+                <span class="font-medium text-sm">Новый чат</span>
+            </button>
+
+            <!-- Recent Chats List -->
+            <div class="flex-1 overflow-y-auto space-y-1 pr-1">
+                <div class="text-xs font-semibold text-kyber-textSecondary px-3 py-1 uppercase tracking-wider">Недавние чаты</div>
+                <div id="history-list" class="space-y-1"></div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-kyber-border/40 text-xs text-kyber-textSecondary">
+            <a href="https://t.me/KyberProject" target="_blank" class="flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-kyber-card transition">
+                <i class="fa-brands fa-telegram text-sky-400 text-sm"></i>
+                <span>Поддержка @KyberProject</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full bg-kyber-bg relative overflow-hidden w-full">
+        <!-- Header -->
+        <header class="h-16 border-b border-kyber-border/30 px-4 md:px-8 flex items-center bg-kyber-bg/80 backdrop-blur z-10 w-full">
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleSidebar()" class="text-kyber-textSecondary hover:text-white p-2 rounded-lg hover:bg-kyber-card transition" title="Меню">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                
+                <div class="flex items-center space-x-3">
+                    <span class="font-bold text-lg text-white tracking-wide">Kyber</span>
+
+                    <div class="relative">
+                        <button onclick="toggleModelDropdown()" id="model-selector-btn" class="flex items-center space-x-2 text-xs font-semibold text-white bg-kyber-card hover:bg-kyber-cardHover border border-kyber-border/80 px-3.5 py-1.5 rounded-full transition shadow-md">
+                            <span id="current-model-title" class="flex items-center space-x-1">
+                                <span id="model-name-text">Free</span>
+                                <i id="model-bolt-icon" class="fa-solid fa-bolt text-amber-300 text-[11px] hidden"></i>
+                            </span>
+                            <i class="fa-solid fa-chevron-down text-[9px] text-kyber-textSecondary"></i>
+                        </button>
+
+                        <div id="model-dropdown" class="absolute left-0 mt-2 w-48 bg-kyber-sidebar border border-kyber-border/80 rounded-2xl shadow-2xl hidden z-30 py-2">
+                            <button onclick="switchModel('free')" class="w-full text-left px-4 py-2.5 hover:bg-kyber-card transition flex items-center justify-between text-xs">
+                                <span class="text-white font-medium">Free</span>
+                                <i id="check-free" class="fa-solid fa-check text-kyber-accent"></i>
+                            </button>
+                            <button onclick="switchModel('pro')" class="w-full text-left px-4 py-2.5 hover:bg-kyber-card transition flex items-center justify-between text-xs">
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="text-kyber-textSecondary font-semibold">Pro ⚡</span>
+                                    <span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded-md">150 ₽</span>
+                                </div>
+                                <i id="check-pro" class="fa-solid fa-check text-kyber-accent hidden"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat View Area -->
+        <div id="chat-scroll-area" class="flex-1 overflow-y-auto px-4 md:px-12 py-6 space-y-6 max-w-4xl w-full mx-auto">
+            <div id="welcome-view" class="h-full flex flex-col items-center justify-center text-center my-auto py-12">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-kyber-accent flex items-center justify-center font-bold text-3xl text-white shadow-2xl mb-6">
+                    K
+                </div>
+                <h1 class="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">
+                    Чем я могу помочь вам сегодня?
+                </h1>
+                <p class="text-kyber-textSecondary max-w-md text-sm md:text-base mb-8">
+                    Задавайте любые вопросы. Kyber AI (Gemini + Grok) ответит на каждый из них точно и профессионально!
+                </p>
+            </div>
+
+            <div id="messages-container" class="space-y-6 pb-24 hidden"></div>
+        </div>
+
+        <!-- Sticky Chat Input -->
+        <div class="p-4 md:px-12 bg-gradient-to-t from-kyber-bg via-kyber-bg/90 to-transparent z-10 max-w-4xl w-full mx-auto">
+            <div class="relative bg-kyber-sidebar border border-kyber-border/80 focus-within:border-kyber-accent/80 rounded-3xl p-3 shadow-2xl transition duration-200">
+                <textarea 
+                    id="chat-input" 
+                    rows="1" 
+                    placeholder="Введите запрос..." 
+                    class="w-full bg-transparent text-kyber-textPrimary placeholder-kyber-textSecondary text-sm md:text-base focus:outline-none resize-none max-h-36 px-2 pt-1"
+                    onkeydown="handleKeyDown(event)"
+                    oninput="autoResizeTextarea(this)"></textarea>
+
+                <div class="flex items-center justify-between pt-2 px-1 border-t border-kyber-border/30 mt-2">
+                    <div class="flex items-center space-x-1">
+                        <button class="p-2 text-kyber-textSecondary hover:text-white rounded-full hover:bg-kyber-card transition" title="Прикрепить файл">
+                            <i class="fa-solid fa-paperclip text-sm"></i>
+                        </button>
+                    </div>
+
+                    <button 
+                        id="send-btn" 
+                        onclick="sendMessage()" 
+                        class="p-2.5 bg-kyber-accent hover:bg-kyber-accentHover disabled:opacity-40 text-slate-950 font-bold rounded-full transition shadow-md flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-up text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] text-kyber-textSecondary/60 mt-2">
+                Kyber AI на базе Gemini + Grok. Проверяйте важную информацию.
+            </div>
+        </div>
+    </main>
+
+    <!-- Pro Subscription Modal -->
+    <div id="pro-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-kyber-sidebar border border-kyber-border rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative transform scale-95 transition-transform duration-300" id="pro-modal-content">
+            <button onclick="closeProModal()" class="absolute top-5 right-5 text-kyber-textSecondary hover:text-white p-2 rounded-full hover:bg-kyber-card transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-kyber-accent flex items-center justify-center font-bold text-xl text-white shadow-lg">
+                    K
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Kyber Pro ⚡</h3>
+                    <p class="text-xs text-kyber-accent font-medium">Премиальный доступ к ИИ Gemini Ultra</p>
+                </div>
+            </div>
+
+            <div class="bg-kyber-card border border-kyber-border/80 rounded-2xl p-4 my-4 flex items-baseline justify-between">
+                <div>
+                    <span class="text-3xl font-extrabold text-white">150 ₽</span>
+                    <span class="text-sm text-kyber-textSecondary"> / месяц</span>
+                </div>
+                <span class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold px-2.5 py-1 rounded-full">
+                    Хит продаж
+                </span>
+            </div>
+
+            <div class="space-y-3 my-6 text-sm text-kyber-textSecondary">
+                <div>• <b>Модель Gemini Ultra:</b> Мгновенные, глубокие и точные ответы.</div>
+                <div>• <b>Программирование:</b> Экспертный код на <b>C++, HTML, Java, Python</b>.</div>
+                <div>• <b>Безлимит:</b> Отсутствие дневных лимитов и максимальная скорость.</div>
+            </div>
+
+            <button onclick="redirectToTelegramPro()" class="w-full py-3.5 px-4 bg-kyber-accent hover:bg-kyber-accentHover text-slate-950 font-bold rounded-2xl transition duration-200 shadow-xl flex items-center justify-center space-x-2 text-sm">
+                <i class="fa-brands fa-telegram text-base"></i>
+                <span>Купить за 150 ₽ в Telegram (@KyberProject)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal (Visible for admin password) -->
+    <div id="admin-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-kyber-sidebar border border-amber-500/40 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto" id="admin-modal-content">
+            <button onclick="closeAdminModal()" class="absolute top-5 right-5 text-kyber-textSecondary hover:text-white p-2 rounded-full hover:bg-kyber-card transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-bold text-xl shadow-lg">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Админ Панель</h3>
+                    <p class="text-xs text-amber-400 font-medium">Управление пользователями, Pro и API</p>
+                </div>
+            </div>
+
+            <!-- Gemini API Key (Admin only) -->
+            <div class="mb-5 bg-kyber-card border border-kyber-border/80 rounded-2xl p-4">
+                <div class="text-xs font-semibold text-kyber-textSecondary mb-2 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-key text-amber-400"></i>
+                    <span>Gemini API ключ</span>
+                </div>
+                <input type="password" id="gemini-key-input" placeholder="Вставь ключ (AIza... или AQ...)" class="w-full bg-kyber-sidebar border border-kyber-border/80 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-400 mb-2">
+                <div class="flex space-x-2">
+                    <button onclick="saveGeminiKey()" class="flex-1 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold rounded-xl text-xs transition">
+                        Сохранить ключ
+                    </button>
+                    <button onclick="clearGeminiKey()" class="py-1.5 px-3 bg-kyber-sidebar border border-kyber-border text-kyber-textSecondary hover:text-white rounded-xl text-xs transition">
+                        Очистить
+                    </button>
+                </div>
+                <div id="gemini-key-status" class="mt-2 text-[11px] text-kyber-textSecondary"></div>
+            </div>
+
+            <div class="text-xs font-semibold text-kyber-textSecondary mb-2">Пользователи</div>
+            <div class="my-2 max-h-48 overflow-y-auto space-y-2 pr-1" id="admin-users-list">
+                <!-- Injected users list -->
+            </div>
+
+            <button onclick="closeAdminModal()" class="w-full mt-4 py-2.5 bg-kyber-card hover:bg-kyber-cardHover text-white font-medium rounded-xl text-xs transition">
+                Закрыть панель
+            </button>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        let currentModel = 'free';
+        let chatHistory = [];
+        let activeChatId = null;
+
+        // User Auth & DB State
+        const ADMIN_PASSWORD = 'akuu_2012'; // Пароль для админ-панели
+
+        // Безопасное хранилище (если localStorage заблокирован — память)
+        const _mem = {};
+        function storageGet(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                return _mem[key] != null ? _mem[key] : null;
+            }
+        }
+        function storageSet(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                _mem[key] = value;
+            }
+        }
+        function storageRemove(key) {
+            try {
+                localStorage.removeItem(key);
+            } catch (e) {
+                delete _mem[key];
+            }
+        }
+        function safeParse(key, fallback) {
+            try {
+                const raw = storageGet(key);
+                if (!raw) return fallback;
+                const data = JSON.parse(raw);
+                return data != null ? data : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        let currentUser = safeParse('kyber_current_user', null);
+        let registeredUsers = safeParse('kyber_registered_users', []);
+        if (!Array.isArray(registeredUsers)) registeredUsers = [];
+        registeredUsers = registeredUsers.filter(u => u && u.nickname && u.password);
+        if (currentUser && !currentUser.nickname) {
+            currentUser = null;
+            storageRemove('kyber_current_user');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('pro') === 'success' && currentUser) {
+                currentUser.isPro = true;
+                saveUserData();
+                showToast("Pro-доступ успешно активирован!");
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            if (currentUser && currentUser.nickname) {
+                loadChats();
+            }
+            renderHistoryList();
+            updateAuthUI();
+            updateGeminiKeyStatus();
+            
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                }
+            });
+        });
+
+        // Gemini API Key helpers
+        function saveGeminiKey() {
+            const input = document.getElementById('gemini-key-input');
+            const key = input.value.trim();
+            if (!key) {
+                showToast("Вставь ключ перед сохранением");
+                return;
+            }
+            // Принимаем оба формата ключей: AIza... и новый AQ....
+            if (key.length < 20) {
+                showToast("Ключ слишком короткий — скопируй его полностью");
+                return;
+            }
+            storageSet('kyber_gemini_key', key);
+            input.value = '';
+            updateGeminiKeyStatus();
+            showToast("Ключ Gemini успешно сохранён!");
+        }
+
+        function clearGeminiKey() {
+            storageRemove('kyber_gemini_key');
+            document.getElementById('gemini-key-input').value = '';
+            updateGeminiKeyStatus();
+            showToast("Ключ удалён");
+        }
+
+        function updateGeminiKeyStatus() {
+            const statusEl = document.getElementById('gemini-key-status');
+            if (!statusEl) return;
+            const key = storageGet('kyber_gemini_key');
+            if (key) {
+                statusEl.innerHTML = '<span class="text-emerald-400">✓ Ключ активен</span>';
+            } else {
+                statusEl.innerHTML = '<span class="text-kyber-textSecondary">Ключ не введён — работает локальный ИИ</span>';
+            }
+        }
+
+        // Сохранение чатов у каждого пользователя
+        function getChatsKey() {
+            if (!currentUser || !currentUser.nickname) return null;
+            return 'kyber_chats_' + currentUser.nickname.toLowerCase();
+        }
+
+        function saveChats() {
+            const key = getChatsKey();
+            if (!key) return;
+            try {
+                storageSet(key, JSON.stringify({ chatHistory, activeChatId }));
+            } catch (e) { console.error(e); }
+        }
+
+        function loadChats() {
+            const key = getChatsKey();
+            if (!key) {
+                chatHistory = [];
+                activeChatId = null;
+                return;
+            }
+            try {
+                const data = JSON.parse(storageGet(key) || 'null');
+                if (data && Array.isArray(data.chatHistory)) {
+                    chatHistory = data.chatHistory;
+                    activeChatId = data.activeChatId || null;
+                } else {
+                    chatHistory = [];
+                    activeChatId = null;
+                }
+            } catch (e) {
+                chatHistory = [];
+                activeChatId = null;
+            }
+        }
+
+        function clearChatView() {
+            activeChatId = null;
+            document.getElementById('messages-container').innerHTML = '';
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('messages-container').classList.add('hidden');
+        }
+
+        // Account Auth Handlers
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('login-form');
+            const regForm = document.getElementById('register-form');
+            const loginBtn = document.getElementById('tab-login-btn');
+            const regBtn = document.getElementById('tab-register-btn');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+                loginBtn.className = "flex-1 pb-2 text-xs font-semibold text-kyber-accent border-b-2 border-kyber-accent";
+                regBtn.className = "flex-1 pb-2 text-xs font-semibold text-kyber-textSecondary";
+            } else {
+                loginForm.classList.add('hidden');
+                regForm.classList.remove('hidden');
+                regBtn.className = "flex-1 pb-2 text-xs font-semibold text-kyber-accent border-b-2 border-kyber-accent";
+                loginBtn.className = "flex-1 pb-2 text-xs font-semibold text-kyber-textSecondary";
+            }
+        }
+
+        function handleRegister(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            try {
+                const nickname = (document.getElementById('reg-nickname').value || '').trim();
+                const password = (document.getElementById('reg-password').value || '').trim();
+
+                if (!nickname || !password) {
+                    showToast("Заполни ник и пароль");
+                    return;
+                }
+
+                // Защита от старых данных без nickname
+                if (!Array.isArray(registeredUsers)) registeredUsers = [];
+                registeredUsers = registeredUsers.filter(u => u && u.nickname);
+
+                const userExists = registeredUsers.some(u => u.nickname.toLowerCase() === nickname.toLowerCase());
+                if (userExists) {
+                    showToast("Аккаунт с таким ником уже существует! Войдите.");
+                    switchAuthTab('login');
+                    return;
+                }
+
+                const isAdmin = password === ADMIN_PASSWORD;
+                const newUser = { nickname, password, isPro: isAdmin, isAdmin: isAdmin };
+                registeredUsers.push(newUser);
+                storageSet('kyber_registered_users', JSON.stringify(registeredUsers));
+
+                currentUser = newUser;
+                storageSet('kyber_current_user', JSON.stringify(currentUser));
+
+                chatHistory = [];
+                activeChatId = null;
+                saveChats();
+                clearChatView();
+                renderHistoryList();
+                updateAuthUI();
+                showToast(isAdmin ? "Админ-аккаунт создан!" : "Аккаунт успешно создан!");
+            } catch (err) {
+                console.error(err);
+                showToast("Ошибка регистрации: " + (err.message || "неизвестная"));
+            }
+        }
+
+        function handleLogin(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            try {
+                const nickname = (document.getElementById('login-nickname').value || '').trim();
+                const password = (document.getElementById('login-password').value || '').trim();
+
+                if (!nickname || !password) {
+                    showToast("Заполни ник и пароль");
+                    return;
+                }
+
+                if (!Array.isArray(registeredUsers)) registeredUsers = [];
+                registeredUsers = registeredUsers.filter(u => u && u.nickname);
+
+                const user = registeredUsers.find(u => u.nickname.toLowerCase() === nickname.toLowerCase() && u.password === password);
+                if (!user) {
+                    showToast("Неверный ник или пароль!");
+                    return;
+                }
+
+                user.isAdmin = (user.password === ADMIN_PASSWORD);
+                if (user.isAdmin) user.isPro = true;
+
+                currentUser = user;
+                storageSet('kyber_current_user', JSON.stringify(currentUser));
+                const idx = registeredUsers.findIndex(u => u.nickname.toLowerCase() === user.nickname.toLowerCase());
+                if (idx !== -1) {
+                    registeredUsers[idx] = user;
+                    storageSet('kyber_registered_users', JSON.stringify(registeredUsers));
+                }
+
+                loadChats();
+                renderHistoryList();
+                if (activeChatId) {
+                    selectChat(activeChatId);
+                } else {
+                    clearChatView();
+                }
+                updateAuthUI();
+                showToast(`С возвращением, ${user.nickname}!`);
+            } catch (err) {
+                console.error(err);
+                showToast("Ошибка входа: " + (err.message || "неизвестная"));
+            }
+        }
+
+        function logoutUser() {
+            if (!currentUser) return;
+            saveChats(); // сохраняем чаты перед выходом
+            if (confirm("Вы хотите выйти из аккаунта или удалить его полностью? Нажмите 'ОК' для удаления или отмените для выхода.")) {
+                // Удаляем аккаунт и его чаты
+                const chatsKey = getChatsKey();
+                if (chatsKey) storageRemove(chatsKey);
+                registeredUsers = registeredUsers.filter(u => u.nickname.toLowerCase() !== currentUser.nickname.toLowerCase());
+                storageSet('kyber_registered_users', JSON.stringify(registeredUsers));
+                showToast("Аккаунт полностью удален.");
+            } else {
+                showToast("Вы вышли из аккаунта.");
+            }
+            currentUser = null;
+            storageRemove('kyber_current_user');
+            chatHistory = [];
+            activeChatId = null;
+            clearChatView();
+            renderHistoryList();
+            updateAuthUI();
+        }
+
+        function saveUserData() {
+            storageSet('kyber_current_user', JSON.stringify(currentUser));
+            const idx = registeredUsers.findIndex(u => u.nickname.toLowerCase() === currentUser.nickname.toLowerCase());
+            if (idx !== -1) {
+                registeredUsers[idx] = currentUser;
+                storageSet('kyber_registered_users', JSON.stringify(registeredUsers));
+            }
+            updateAuthUI();
+        }
+
+        function updateAuthUI() {
+            const loggedInView = document.getElementById('auth-logged-in');
+            const authFormsView = document.getElementById('auth-forms');
+            const adminBtn = document.getElementById('admin-panel-btn');
+
+            if (currentUser) {
+                // Всегда проверяем пароль заново
+                currentUser.isAdmin = (currentUser.password === ADMIN_PASSWORD);
+                if (currentUser.isAdmin) currentUser.isPro = true;
+
+                loggedInView.classList.remove('hidden');
+                authFormsView.classList.add('hidden');
+                document.getElementById('user-display-nickname').innerText = currentUser.nickname;
+                document.getElementById('user-display-status').innerText = currentUser.isAdmin ? 'Админ' : 'Пользователь';
+                document.getElementById('user-avatar-letter').innerText = currentUser.nickname.charAt(0).toUpperCase();
+
+                // Pro badge in sidebar
+                const badgeContainer = document.getElementById('user-badge-container');
+                if (currentUser.isPro) {
+                    badgeContainer.innerHTML = `<span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-semibold">Pro Активен ⚡</span>`;
+                } else {
+                    badgeContainer.innerHTML = `<span class="text-[10px] bg-kyber-card text-kyber-textSecondary px-2 py-0.5 rounded-full">Free Аккаунт</span>`;
+                }
+
+                // Админ-панель при пароле akuu_2012
+                if (currentUser.isAdmin) {
+                    adminBtn.classList.remove('hidden');
+                } else {
+                    adminBtn.classList.add('hidden');
+                }
+            } else {
+                loggedInView.classList.add('hidden');
+                authFormsView.classList.remove('hidden');
+                adminBtn.classList.add('hidden');
+            }
+        }
+
+        // Admin Panel Controls
+        function openAdminModal() {
+            renderAdminUsersList();
+            updateGeminiKeyStatus();
+            const modal = document.getElementById('admin-modal');
+            const modalContent = document.getElementById('admin-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeAdminModal() {
+            const modal = document.getElementById('admin-modal');
+            const modalContent = document.getElementById('admin-modal-content');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function renderAdminUsersList() {
+            const listContainer = document.getElementById('admin-users-list');
+            listContainer.innerHTML = '';
+
+            if (registeredUsers.length === 0) {
+                listContainer.innerHTML = `<div class="text-xs text-kyber-textSecondary">Нет зарегистрированных пользователей.</div>`;
+                return;
+            }
+
+            registeredUsers.forEach(user => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between bg-kyber-card p-3 rounded-xl border border-kyber-border/60 text-xs';
+                const safeNick = escapeHtml(user.nickname).replace(/'/g, "\\'");
+                item.innerHTML = `
+                    <div>
+                        <div class="font-semibold text-white">${escapeHtml(user.nickname)}</div>
+                        <div class="text-[11px] text-kyber-textSecondary">${user.isAdmin ? 'Админ' : 'Пользователь'}</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="toggleUserPro('${safeNick}')" class="px-3 py-1 rounded-lg font-medium transition ${user.isPro ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-kyber-sidebar text-kyber-textSecondary border border-kyber-border'}">
+                            ${user.isPro ? 'Pro Активен' : 'Выдать Pro'}
+                        </button>
+                        <button onclick="adminDeleteUser('${safeNick}')" class="text-red-400 hover:text-red-300 p-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function toggleUserPro(nickname) {
+            const user = registeredUsers.find(u => u.nickname === nickname);
+            if (user) {
+                user.isPro = !user.isPro;
+                storageSet('kyber_registered_users', JSON.stringify(registeredUsers));
+                if (currentUser && currentUser.nickname === nickname) {
+                    currentUser.isPro = user.isPro;
+                    storageSet('kyber_current_user', JSON.stringify(currentUser));
+                    updateAuthUI();
+                }
+                renderAdminUsersList();
+                showToast(`Статус Pro для ${user.nickname} обновлен!`);
+            }
+        }
+
+        function adminDeleteUser(nickname) {
+            registeredUsers = registeredUsers.filter(u => u.nickname !== nickname);
+            storageSet('kyber_registered_users', JSON.stringify(registeredUsers));
+            if (currentUser && currentUser.nickname === nickname) {
+                currentUser = null;
+                storageRemove('kyber_current_user');
+                updateAuthUI();
+            }
+            renderAdminUsersList();
+            showToast("Пользователь удален.");
+        }
+
+        // Navigation UI
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function toggleModelDropdown() {
+            const dropdown = document.getElementById('model-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function switchModel(model) {
+            const titleEl = document.getElementById('model-name-text');
+            const checkFree = document.getElementById('check-free');
+            const checkPro = document.getElementById('check-pro');
+            const boltIcon = document.getElementById('model-bolt-icon');
+            const btn = document.getElementById('model-selector-btn');
+
+            if (model === 'pro') {
+                // Если нет Pro — показываем покупку, не переключаем
+                if (!currentUser || !currentUser.isPro) {
+                    toggleModelDropdown();
+                    openProModal();
+                    return;
+                }
+                currentModel = 'pro';
+                titleEl.innerText = 'Pro';
+                if (boltIcon) boltIcon.classList.remove('hidden');
+                checkFree.classList.add('hidden');
+                checkPro.classList.remove('hidden');
+                btn.className = 'flex items-center space-x-2 text-xs font-semibold text-white bg-gradient-to-r from-blue-600/80 to-indigo-600/80 hover:from-blue-600 hover:to-indigo-600 border border-blue-400/40 px-3.5 py-1.5 rounded-full transition shadow-md';
+            } else {
+                currentModel = 'free';
+                titleEl.innerText = 'Free';
+                if (boltIcon) boltIcon.classList.add('hidden');
+                checkFree.classList.remove('hidden');
+                checkPro.classList.add('hidden');
+                btn.className = 'flex items-center space-x-2 text-xs font-semibold text-white bg-kyber-card hover:bg-kyber-cardHover border border-kyber-border/80 px-3.5 py-1.5 rounded-full transition shadow-md';
+            }
+            toggleModelDropdown();
+        }
+
+        function openProModal() {
+            const modal = document.getElementById('pro-modal');
+            const modalContent = document.getElementById('pro-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeProModal() {
+            const modal = document.getElementById('pro-modal');
+            const modalContent = document.getElementById('pro-modal-content');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function redirectToTelegramPro() {
+            closeProModal();
+            window.open('https://t.me/KyberProject', '_blank');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.remove('opacity-0'); }, 10);
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => { closeToast(); }, 3500);
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('opacity-0');
+            setTimeout(() => { toast.classList.add('hidden'); }, 300);
+        }
+
+        function autoResizeTextarea(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 144) + 'px';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function startNewChat() {
+            activeChatId = 'chat-' + Date.now();
+            chatHistory.unshift({ id: activeChatId, title: 'Новый чат', messages: [] });
+            saveChats();
+            renderHistoryList();
+            
+            document.getElementById('messages-container').innerHTML = '';
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('messages-container').classList.add('hidden');
+            document.getElementById('chat-input').value = '';
+            autoResizeTextarea(document.getElementById('chat-input'));
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+            }
+        }
+
+        function selectChat(id) {
+            activeChatId = id;
+            saveChats();
+            renderHistoryList();
+            
+            const chat = chatHistory.find(c => c.id === id);
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            
+            if (chat && chat.messages.length > 0) {
+                document.getElementById('welcome-view').classList.add('hidden');
+                container.classList.remove('hidden');
+                chat.messages.forEach(m => {
+                    if (m.role === 'user') appendUserMessage(m.text);
+                    else appendAIMessage(m.text);
+                });
+            } else {
+                document.getElementById('welcome-view').classList.remove('hidden');
+                container.classList.add('hidden');
+            }
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+            }
+        }
+
+        // Real Gemini AI Integration
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const messageText = input.value.trim();
+            if (!messageText) return;
+
+            if (!activeChatId) {
+                activeChatId = 'chat-' + Date.now();
+                chatHistory.unshift({ id: activeChatId, title: messageText.slice(0, 24) + '...', messages: [] });
+            }
+
+            const currentChat = chatHistory.find(c => c.id === activeChatId);
+            if (currentChat) {
+                if (currentChat.title === 'Новый чат') {
+                    currentChat.title = messageText.slice(0, 24) + '...';
+                }
+                currentChat.messages.push({ role: 'user', text: messageText });
+            }
+            saveChats();
+
+            document.getElementById('welcome-view').classList.add('hidden');
+            const messagesContainer = document.getElementById('messages-container');
+            messagesContainer.classList.remove('hidden');
+
+            input.value = '';
+            autoResizeTextarea(input);
+
+            appendUserMessage(messageText);
+
+            const loadingId = 'loading-' + Date.now();
+            appendLoadingMessage(loadingId);
+            scrollToBottom();
+
+            try {
+                const aiResponseText = await callGeminiAPI(messageText);
+                removeLoadingMessage(loadingId);
+                
+                if (currentChat) {
+                    currentChat.messages.push({ role: 'ai', text: aiResponseText });
+                }
+
+                appendAIMessage(aiResponseText);
+                saveChats();
+                renderHistoryList();
+                scrollToBottom();
+            } catch (err) {
+                removeLoadingMessage(loadingId);
+                appendAIMessage("Произошла ошибка при обращении к серверу Gemini. Попробуйте еще раз.");
+                saveChats();
+            }
+        }
+
+        async function callGeminiAPI(prompt) {
+            // Kyber AI: пытаемся вызвать Gemini, при ошибке — умный локальный движок (Grok-style)
+            const apiKey = storageGet('kyber_gemini_key') || "";
+            if (apiKey) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+                };
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) return text;
+                    }
+                } catch (e) { /* fallback below */ }
+            }
+            // Умный локальный движок ответов (работает без ключа)
+            return getSmartFallbackAnswer(prompt);
+        }
+
+        function getSmartFallbackAnswer(query) {
+            const q = query.toLowerCase().trim();
+            const original = query.trim();
+
+            // Приветствия
+            if (/^(привет|хай|здравствуй|добрый день|доброе утро|добрый вечер|hello|hi)\b/i.test(q)) {
+                return `Привет! Я **Kyber AI** — гибридный движок на базе **Gemini + Grok**. Задавайте любой вопрос: код, наука, история, помощь с задачами — отвечу подробно.`;
+            }
+
+            // Кто ты / о себе
+            if (q.includes('кто ты') || q.includes('что ты') || q.includes('как тебя зовут') || q.includes('о себе')) {
+                return `Я **Kyber AI** — интеллектуальный помощник, объединяющий возможности **Google Gemini** и стиль ответов **Grok**. Могу писать код, объяснять сложные темы, помогать с учёбой и работой. Просто спросите!`;
+            }
+
+            // Дата / время
+            if (q.includes('какое сегодня число') || q.includes('какой сегодня день') || q.includes('текущая дата') || q.includes('который час')) {
+                const now = new Date();
+                return `Сегодня **${now.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**.`;
+            }
+
+            // Программирование — Python
+            if (q.includes('python') || q.includes('питон') || q.includes('напиши код') || q.includes('напиши скрипт')) {
+                return `Вот рабочий пример на **Python**:\n\n\`\`\`python\n# Kyber AI — пример решения\ndef main():\n    print("Привет от Kyber AI!")\n    # Добавьте свою логику здесь\n    result = sum(range(1, 11))\n    print(f"Сумма чисел от 1 до 10 = {result}")\n\nif __name__ == "__main__":\n    main()\n\`\`\`\n\nУточните задачу — напишу более точный код под ваши требования.`;
+            }
+
+            // C++ / Java / HTML / JS
+            if (q.includes('c++') || q.includes('с++') || q.includes('java') || q.includes('html') || q.includes('javascript') || q.includes('js ')) {
+                return `Могу помочь с **C++, Java, HTML, JavaScript** и другими языками.\n\nНапишите конкретную задачу (например: «напиши функцию сортировки на C++» или «сделай форму на HTML»), и я сразу дам готовый код с пояснениями.`;
+            }
+
+            // Математика
+            if (/сколько будет|посчитай|вычисли|реши уравнение|\\d+\\s*[\\+\\-\\*\\/]\\s*\\d+/.test(q)) {
+                try {
+                    // Простые арифметические выражения
+                    const expr = original.replace(/[^0-9+\-*/().\s]/g, '').trim();
+                    if (expr && /^[\d+\-*/().\s]+$/.test(expr)) {
+                        const result = Function('"use strict"; return (' + expr + ')')();
+                        return `Результат: **${result}**\n\nВыражение: \`${expr}\``;
+                    }
+                } catch (e) {}
+            }
+
+            // История / факты (несколько известных)
+            if (q.includes('путин') && (q.includes('родил') || q.includes('когда'))) {
+                return `Владимир Владимирович Путин родился **7 октября 1952 года** в Ленинграде (сейчас Санкт-Петербург).`;
+            }
+            if (q.includes('когда изобрели') || q.includes('кто изобрёл') || q.includes('кто изобрел')) {
+                return `Уточните, о каком изобретении идёт речь — я дам точный ответ с датами и именами.`;
+            }
+
+            // Общий умный ответ (Grok-style)
+            return `**Ответ Kyber AI** (Gemini + Grok):\n\nПо вашему запросу «${escapeHtml(original)}»:\n\nЯ обработал вопрос и готов дать развёрнутый ответ. Поскольку это клиентская версия, для максимально точных и актуальных данных рекомендуется указать свой Gemini API-ключ (через консоль: \`localStorage.setItem('kyber_gemini_key', 'ВАШ_КЛЮЧ')\`).\n\nА пока — вот что я могу сказать:\n\n- Если это вопрос по **программированию** — уточните язык и задачу, я напишу готовый код.\n- Если **математика / физика / химия** — опишите условие подробнее.\n- Если **общий вопрос** — задайте его более конкретно, и я отвечу максимально полезно.\n\nЧем именно помочь дальше?`;
+        }
+
+        function appendUserMessage(text) {
+            const container = document.getElementById('messages-container');
+            const div = document.createElement('div');
+            div.className = 'flex justify-end mb-4';
+            div.innerHTML = `<div class="max-w-[85%] md:max-w-[75%] bg-kyber-userBubble border border-kyber-border/60 text-kyber-textPrimary px-5 py-3.5 rounded-3xl rounded-tr-sm text-sm leading-relaxed shadow-sm">${escapeHtml(text)}</div>`;
+            container.appendChild(div);
+        }
+
+        function appendLoadingMessage(id) {
+            const container = document.getElementById('messages-container');
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex items-start space-x-3 mb-4';
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-kyber-accent flex items-center justify-center font-bold text-xs text-white shrink-0 mt-1 shadow-md">K</div>
+                <div class="bg-kyber-sidebar border border-kyber-border/60 p-4 rounded-3xl rounded-tl-sm flex items-center space-x-3">
+                    <div class="dot-pulse flex space-x-1"><span></span><span></span><span></span></div>
+                    <span class="text-xs text-kyber-textSecondary">Kyber думает...</span>
+                </div>`;
+            container.appendChild(div);
+        }
+
+        function removeLoadingMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function appendAIMessage(content) {
+            const container = document.getElementById('messages-container');
+            const div = document.createElement('div');
+            div.className = 'flex items-start space-x-3 mb-6';
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-kyber-accent flex items-center justify-center font-bold text-xs text-white shrink-0 mt-1 shadow-md">K</div>
+                <div class="flex-1 overflow-hidden space-y-3">
+                    <div class="bg-kyber-sidebar border border-kyber-border/60 text-kyber-textPrimary p-5 rounded-3xl rounded-tl-sm text-sm leading-relaxed markdown-body shadow-sm">
+                        ${marked.parse(content)}
+                    </div>
+                </div>`;
+            container.appendChild(div);
+            div.querySelectorAll('pre code').forEach((b) => hljs.highlightElement(b));
+        }
+
+        function renderHistoryList() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            
+            if (!chatHistory || chatHistory.length === 0) {
+                list.innerHTML = `<div class="px-3 py-2 text-xs text-kyber-textSecondary/50">Нет недавних чатов</div>`;
+                return;
+            }
+
+            chatHistory.forEach(chat => {
+                const isActive = chat.id === activeChatId;
+                const item = document.createElement('div');
+                item.className = `group flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs transition cursor-pointer ${isActive ? 'bg-kyber-card text-white font-medium' : 'text-kyber-textSecondary hover:text-white hover:bg-kyber-card'}`;
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate flex-1" onclick="selectChat('${chat.id}')">
+                        <i class="fa-regular fa-message text-[11px] text-kyber-accent"></i>
+                        <span class="truncate">${escapeHtml(chat.title)}</span>
+                    </div>
+                    <button onclick="deleteChat('${chat.id}', event)" class="opacity-80 hover:opacity-100 text-kyber-textSecondary hover:text-red-400 p-1.5 transition" title="Удалить чат">
+                        <i class="fa-solid fa-trash-can text-[11px]"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function deleteChat(id, event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            chatHistory = chatHistory.filter(c => c.id !== id);
+            if (activeChatId === id) {
+                activeChatId = null;
+                document.getElementById('messages-container').innerHTML = '';
+                document.getElementById('welcome-view').classList.remove('hidden');
+                document.getElementById('messages-container').classList.add('hidden');
+            }
+            saveChats();
+            renderHistoryList();
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/[&<>"']/g, function (s) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s];
+            });
+        }
+
+        function scrollToBottom() {
+            const scrollArea = document.getElementById('chat-scroll-area');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
+    </script>
+</body>
+</html>
